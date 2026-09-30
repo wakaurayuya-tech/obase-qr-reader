@@ -7,13 +7,12 @@
 
   <title>出退校QRリーダー</title>
 
-  <!-- QRコード読み取りライブラリ -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
   <style>
     body {
       margin: 0;
-      padding: 25px 15px;
+      padding: 20px 15px;
       text-align: center;
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       background: #f5f7fa;
@@ -21,7 +20,7 @@
 
     h1 {
       font-size: 32px;
-      margin-bottom: 10px;
+      margin: 10px 0;
     }
 
     p {
@@ -43,47 +42,50 @@
     #cameraBox {
       display: none;
       position: relative;
-      width: 90%;
-      max-width: 650px;
+      width: 95%;
+      max-width: 600px;
       margin: 20px auto;
+      overflow: hidden;
+      border-radius: 20px;
+      background: #000;
     }
 
     #camera {
+      display: block;
       width: 100%;
-      border-radius: 20px;
-      background: black;
       transform: scaleX(-1);
     }
 
     #guide {
       position: absolute;
-      width: 55%;
+      width: 65%;
       aspect-ratio: 1 / 1;
-      left: 22.5%;
+      left: 17.5%;
       top: 50%;
       transform: translateY(-50%);
-      border: 4px solid white;
+      border: 5px solid white;
       border-radius: 15px;
       box-sizing: border-box;
       pointer-events: none;
     }
 
     #status {
-      margin-top: 20px;
+      margin: 20px auto 0;
+      max-width: 700px;
       font-size: 18px;
       font-weight: bold;
       line-height: 1.5;
     }
 
     #result {
-      margin: 20px auto;
+      display: none;
+      margin: 15px auto;
       padding: 15px;
       max-width: 700px;
-      font-size: 15px;
-      word-break: break-all;
       background: white;
       border-radius: 12px;
-      display: none;
+      word-break: break-all;
+      font-size: 14px;
     }
 
     canvas {
@@ -98,7 +100,7 @@
 
   <p>
     学生証のQRコードを<br>
-    枠の中にかざしてください
+    白い枠の中にかざしてください
   </p>
 
   <button id="startButton">
@@ -110,7 +112,6 @@
            autoplay
            playsinline
            muted></video>
-
     <div id="guide"></div>
   </div>
 
@@ -122,153 +123,202 @@
 
   <div id="result"></div>
 
+<script>
 
-  <script>
+const video = document.getElementById("camera");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d", {
+  willReadFrequently: true
+});
 
-    const video =
-      document.getElementById("camera");
+const button = document.getElementById("startButton");
+const cameraBox = document.getElementById("cameraBox");
+const status = document.getElementById("status");
+const result = document.getElementById("result");
 
-    const canvas =
-      document.getElementById("canvas");
+let scanning = false;
+let lastScan = 0;
 
-    const context =
-      canvas.getContext("2d", {
-        willReadFrequently: true
+
+/* -------------------------
+   カメラ起動
+------------------------- */
+
+button.addEventListener("click", async () => {
+
+  try {
+
+    status.textContent =
+      "インカメラを起動しています…";
+
+    const stream =
+      await navigator.mediaDevices.getUserMedia({
+
+        video: {
+          facingMode: "user",
+
+          /* iPadで処理しやすいサイズ */
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
+
+        audio: false
+
       });
 
-    const button =
-      document.getElementById("startButton");
+    video.srcObject = stream;
 
-    const cameraBox =
-      document.getElementById("cameraBox");
+    cameraBox.style.display = "block";
+    button.style.display = "none";
 
-    const status =
-      document.getElementById("status");
+    await video.play();
 
-    const result =
-      document.getElementById("result");
+    scanning = true;
 
-    let scanning = false;
+    status.textContent =
+      "QRコードを白い枠の中にかざしてください";
 
+    requestAnimationFrame(scanQR);
 
-    button.addEventListener("click", async () => {
+  }
 
-      try {
+  catch(error) {
 
-        status.textContent =
-          "インカメラを起動しています…";
+    status.textContent =
+      "カメラエラー：" +
+      error.name +
+      " / " +
+      error.message;
 
-        const stream =
-          await navigator.mediaDevices.getUserMedia({
+  }
 
-            video: {
-              facingMode: "user",
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            },
-
-            audio: false
-
-          });
+});
 
 
-        video.srcObject = stream;
+/* -------------------------
+   QR読み取り
+------------------------- */
 
-        cameraBox.style.display = "block";
+function scanQR(time) {
 
-        button.style.display = "none";
-
-        await video.play();
-
-        scanning = true;
-
-        status.textContent =
-          "学生証のQRコードを枠の中にかざしてください";
-
-        requestAnimationFrame(scanQR);
+  if (!scanning) return;
 
 
-      } catch (error) {
+  /*
+   毎フレーム解析せず
+   約200msごとに解析
+  */
 
-        status.textContent =
-          "カメラエラー：" +
-          error.name +
-          " / " +
-          error.message;
+  if (time - lastScan < 200) {
 
-      }
+    requestAnimationFrame(scanQR);
+    return;
 
-    });
+  }
 
-
-    function scanQR() {
-
-      if (!scanning) {
-        return;
-      }
+  lastScan = time;
 
 
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-
-        canvas.width =
-          video.videoWidth;
-
-        canvas.height =
-          video.videoHeight;
+  if (video.readyState ===
+      video.HAVE_ENOUGH_DATA) {
 
 
-        context.drawImage(
-          video,
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
+    /*
+     解析サイズを固定して
+     iPadの負荷を軽くする
+    */
+
+    const scanWidth = 480;
+
+    const ratio =
+      video.videoHeight /
+      video.videoWidth;
+
+    const scanHeight =
+      Math.round(scanWidth * ratio);
 
 
-        const imageData =
-          context.getImageData(
-            0,
-            0,
-            canvas.width,
-            canvas.height
-          );
+    canvas.width = scanWidth;
+    canvas.height = scanHeight;
 
 
-        const code =
-          jsQR(
-            imageData.data,
-            imageData.width,
-            imageData.height,
-            {
-              inversionAttempts:
-                "dontInvert"
-            }
-          );
+    ctx.drawImage(
+      video,
+      0,
+      0,
+      scanWidth,
+      scanHeight
+    );
 
 
-        if (code && code.data) {
+    const imageData =
+      ctx.getImageData(
+        0,
+        0,
+        scanWidth,
+        scanHeight
+      );
 
-          scanning = false;
 
-          status.textContent =
-            "QRコードを読み取りました！";
+    /*
+     通常＋反転QRの両方を確認
+    */
 
-          result.style.display =
-            "block";
-
-          result.textContent =
-            code.data;
-
-          return;
+    const code =
+      jsQR(
+        imageData.data,
+        imageData.width,
+        imageData.height,
+        {
+          inversionAttempts:
+            "attemptBoth"
         }
+      );
+
+
+    if (code && code.data) {
+
+      scanning = false;
+
+      status.textContent =
+        "✅ QRコードを読み取りました！";
+
+      result.style.display =
+        "block";
+
+      result.textContent =
+        code.data;
+
+      /*
+       読み取り成功時に
+       カメラ停止
+      */
+
+      const stream =
+        video.srcObject;
+
+      if (stream) {
+
+        stream
+          .getTracks()
+          .forEach(track =>
+            track.stop()
+          );
+
       }
 
+      return;
 
-      requestAnimationFrame(scanQR);
     }
 
-  </script>
+  }
+
+
+  requestAnimationFrame(scanQR);
+
+}
+
+</script>
 
 </body>
 </html>
