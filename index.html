@@ -7,10 +7,13 @@
 
   <title>出退校QRリーダー</title>
 
+  <!-- QRコード読み取りライブラリ -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
   <style>
     body {
       margin: 0;
-      padding: 30px 20px;
+      padding: 25px 15px;
       text-align: center;
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       background: #f5f7fa;
@@ -18,14 +21,15 @@
 
     h1 {
       font-size: 32px;
+      margin-bottom: 10px;
     }
 
     p {
       font-size: 20px;
-      line-height: 1.6;
+      line-height: 1.5;
     }
 
-    button {
+    #startButton {
       margin: 20px;
       padding: 18px 35px;
       font-size: 22px;
@@ -36,20 +40,54 @@
       color: white;
     }
 
-    video {
+    #cameraBox {
       display: none;
+      position: relative;
       width: 90%;
-      max-width: 700px;
+      max-width: 650px;
       margin: 20px auto;
+    }
+
+    #camera {
+      width: 100%;
       border-radius: 20px;
       background: black;
       transform: scaleX(-1);
+    }
+
+    #guide {
+      position: absolute;
+      width: 55%;
+      aspect-ratio: 1 / 1;
+      left: 22.5%;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 4px solid white;
+      border-radius: 15px;
+      box-sizing: border-box;
+      pointer-events: none;
     }
 
     #status {
       margin-top: 20px;
       font-size: 18px;
       font-weight: bold;
+      line-height: 1.5;
+    }
+
+    #result {
+      margin: 20px auto;
+      padding: 15px;
+      max-width: 700px;
+      font-size: 15px;
+      word-break: break-all;
+      background: white;
+      border-radius: 12px;
+      display: none;
+    }
+
+    canvas {
+      display: none;
     }
   </style>
 </head>
@@ -60,51 +98,95 @@
 
   <p>
     学生証のQRコードを<br>
-    カメラにかざしてください
+    枠の中にかざしてください
   </p>
 
   <button id="startButton">
-    カメラを起動
+    QR読み取りを開始
   </button>
 
-  <video
-    id="camera"
-    autoplay
-    playsinline
-    muted>
-  </video>
+  <div id="cameraBox">
+    <video id="camera"
+           autoplay
+           playsinline
+           muted></video>
 
-  <div id="status">
-    「カメラを起動」を押してください
+    <div id="guide"></div>
   </div>
 
+  <canvas id="canvas"></canvas>
+
+  <div id="status">
+    「QR読み取りを開始」を押してください
+  </div>
+
+  <div id="result"></div>
+
+
   <script>
-    const video = document.getElementById("camera");
-    const button = document.getElementById("startButton");
-    const status = document.getElementById("status");
+
+    const video =
+      document.getElementById("camera");
+
+    const canvas =
+      document.getElementById("canvas");
+
+    const context =
+      canvas.getContext("2d", {
+        willReadFrequently: true
+      });
+
+    const button =
+      document.getElementById("startButton");
+
+    const cameraBox =
+      document.getElementById("cameraBox");
+
+    const status =
+      document.getElementById("status");
+
+    const result =
+      document.getElementById("result");
+
+    let scanning = false;
+
 
     button.addEventListener("click", async () => {
 
       try {
 
-        status.textContent = "カメラを起動しています…";
+        status.textContent =
+          "インカメラを起動しています…";
 
         const stream =
           await navigator.mediaDevices.getUserMedia({
+
             video: {
-              facingMode: "user"
+              facingMode: "user",
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
             },
+
             audio: false
+
           });
 
+
         video.srcObject = stream;
-        video.style.display = "block";
+
+        cameraBox.style.display = "block";
+
         button.style.display = "none";
 
         await video.play();
 
+        scanning = true;
+
         status.textContent =
-          "インカメラ起動成功！";
+          "学生証のQRコードを枠の中にかざしてください";
+
+        requestAnimationFrame(scanQR);
+
 
       } catch (error) {
 
@@ -117,6 +199,75 @@
       }
 
     });
+
+
+    function scanQR() {
+
+      if (!scanning) {
+        return;
+      }
+
+
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+
+        canvas.width =
+          video.videoWidth;
+
+        canvas.height =
+          video.videoHeight;
+
+
+        context.drawImage(
+          video,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+
+
+        const imageData =
+          context.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          );
+
+
+        const code =
+          jsQR(
+            imageData.data,
+            imageData.width,
+            imageData.height,
+            {
+              inversionAttempts:
+                "dontInvert"
+            }
+          );
+
+
+        if (code && code.data) {
+
+          scanning = false;
+
+          status.textContent =
+            "QRコードを読み取りました！";
+
+          result.style.display =
+            "block";
+
+          result.textContent =
+            code.data;
+
+          return;
+        }
+      }
+
+
+      requestAnimationFrame(scanQR);
+    }
+
   </script>
 
 </body>
