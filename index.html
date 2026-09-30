@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+  <title>出退校QRリーダー</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 30px 20px;
+      text-align: center;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f7fa;
+    }
+
+    h1 {
+      font-size: 32px;
+    }
+
+    p {
+      font-size: 20px;
+      line-height: 1.6;
+    }
+
+    button {
+      margin: 20px;
+      padding: 18px 35px;
+      font-size: 22px;
+      font-weight: bold;
+      border: none;
+      border-radius: 15px;
+      background: #1976d2;
+      color: white;
+    }
+
+    video {
+      display: none;
+      width: 90%;
+      max-width: 700px;
+      margin: 20px auto;
+      border-radius: 20px;
+      background: black;
+      transform: scaleX(-1);
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>出退校受付</h1>
+
+  <p>
+    学生証のQRコードを<br>
+    カメラにかざしてください
+  </p>
+
+  <button id="startButton">
+    カメラを起動
+  </button>
+
+  <video
+    id="camera"
+    autoplay
+    playsinline
+    muted>
+  </video>
+
+  <div id="status">
+    「カメラを起動」を押してください
+  </div>
+
+  <script>
+    const video = document.getElementById("camera");
+    const button = document.getElementById("startButton");
+    const status = document.getElementById("status");
+
+    button.addEventListener("click", async () => {
+
+      try {
+
+        status.textContent = "カメラを起動しています…";
+
+        const stream =
+          await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "user"
+            },
+            audio: false
+          });
+
+        video.srcObject = stream;
+        video.style.display = "block";
+        button.style.display = "none";
+
+        await video.play();
+
+        status.textContent =
+          "インカメラ起動成功！";
+
+      } catch (error) {
+
+        status.textContent =
+          "カメラエラー：" +
+          error.name +
+          " / " +
+          error.message;
+
+      }
+
+    });
+  </script>
+
+</body>
+</html>
