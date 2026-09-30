@@ -278,40 +278,46 @@ function scanQR(time) {
 
     if (code && code.data) {
 
-      scanning = false;
+  scanning = false;
 
+  status.textContent =
+    "✅ 読み取りました。フォームを開いています…";
+
+  // GoogleフォームのURLか確認
+  const qrUrl = code.data.trim();
+
+  const isGoogleForm =
+    qrUrl.startsWith("https://docs.google.com/forms/") ||
+    qrUrl.startsWith("https://forms.gle/");
+
+  if (!isGoogleForm) {
+
+    status.textContent =
+      "⚠️ 学生証のQRコードではありません";
+
+    // 2秒後に再び読み取り開始
+    setTimeout(() => {
+      scanning = true;
       status.textContent =
-        "✅ QRコードを読み取りました！";
+        "QRコードを白い枠の中にかざしてください";
+      requestAnimationFrame(scanQR);
+    }, 2000);
 
-      result.style.display =
-        "block";
-
-      result.textContent =
-        code.data;
-
-      /*
-       読み取り成功時に
-       カメラ停止
-      */
-
-      const stream =
-        video.srcObject;
-
-      if (stream) {
-
-        stream
-          .getTracks()
-          .forEach(track =>
-            track.stop()
-          );
-
-      }
-
-      return;
-
-    }
-
+    return;
   }
+
+  // カメラ停止
+  const stream = video.srcObject;
+
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+  }
+
+  // 読み取った学生専用Googleフォームを開く
+  window.location.href = qrUrl;
+
+  return;
+}
 
 
   requestAnimationFrame(scanQR);
