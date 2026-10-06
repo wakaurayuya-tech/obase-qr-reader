@@ -353,6 +353,7 @@
 
       /*
         QRコードを解析
+        通常の白背景＋黒QRのみを解析
       */
 
       const code =
@@ -362,7 +363,7 @@
           imageData.height,
           {
             inversionAttempts:
-              "attemptBoth"
+              "dontInvert"
           }
         );
 
@@ -500,18 +501,11 @@
 
 
         /*
-          Googleフォームへ移動
+          Googleフォームへ即時移動
         */
 
-        setTimeout(
-          () => {
-
-            window.location.assign(
-              qrUrl
-            );
-
-          },
-          300
+        window.location.assign(
+          qrUrl
         );
 
 
