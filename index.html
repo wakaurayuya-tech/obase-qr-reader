@@ -302,41 +302,74 @@
 
 
       /*
-        iPad向けに解析サイズを軽量化
+        カメラ映像の中央部分だけを解析する
+        白枠より少し広めの範囲
       */
 
-      const scanWidth = 480;
-
-
-      const ratio =
-        video.videoHeight /
+      const videoWidth =
         video.videoWidth;
 
+      const videoHeight =
+        video.videoHeight;
 
-      const scanHeight =
+
+      /*
+        映像の短辺の約80％を
+        正方形として切り出す
+      */
+
+      const cropSize =
         Math.round(
-          scanWidth * ratio
+          Math.min(
+            videoWidth,
+            videoHeight
+          ) * 0.80
         );
 
 
+      const sourceX =
+        Math.round(
+          (videoWidth - cropSize) / 2
+        );
+
+      const sourceY =
+        Math.round(
+          (videoHeight - cropSize) / 2
+        );
+
+
+      /*
+        解析用Canvasは360×360
+        処理する画素数を減らして高速化
+      */
+
+      const scanSize = 360;
+
+
       canvas.width =
-        scanWidth;
+        scanSize;
 
       canvas.height =
-        scanHeight;
+        scanSize;
 
 
 
       /*
-        カメラ映像をCanvasへ
+        中央部分だけCanvasへ取り込む
       */
 
       ctx.drawImage(
         video,
+
+        sourceX,
+        sourceY,
+        cropSize,
+        cropSize,
+
         0,
         0,
-        scanWidth,
-        scanHeight
+        scanSize,
+        scanSize
       );
 
 
@@ -345,15 +378,17 @@
         ctx.getImageData(
           0,
           0,
-          scanWidth,
-          scanHeight
+          scanSize,
+          scanSize
         );
 
 
 
       /*
-        QRコードを解析
-        通常の白背景＋黒QRのみを解析
+        QRコード解析
+
+        通常の
+        明るい背景＋黒QRのみ解析
       */
 
       const code =
@@ -480,7 +515,7 @@
 
 
         /*
-          カメラを停止
+          カメラ停止
         */
 
         const stream =
